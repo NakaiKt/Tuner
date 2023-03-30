@@ -53,23 +53,7 @@ def get_args_optuna():
     parser.add_argument("--direction", type=str, default="minimize", help="direction of optimization")
     parser.add_argument("--tuning_mode", type=str, default="pretrain", help=f"tuning mode. {TUNING_MODE}")
 
-    args = parser.parse_args()
-
-    logger.info("study_name: %s", args.study_name)
-    logger.info("n_trials: %s", args.n_trials)
-    logger.info("n_warmup_steps: %s", args.n_warmup_steps)
-    logger.info("direction: %s", args.direction)
-    logger.info("tuning_mode: %s", args.tuning_mode)
-
-    return args
-
-def get_args_pretrain():
-    """pretrainの調整の設定をコマンドラインから取得する関数
-
-    Returns:
-        argparse.Namespace: コマンドライン引数
-    """
-    parser = argparse.ArgumentParser(formatter_class=HelpFormatter)
+    # pretrainの調整の設定
     parser.add_argument("--epoch", type=int, default=15, help="number of epoch")
     parser.add_argument("--source", type=str, default="./data/images", help="source of images")
     parser.add_argument("--csv_path", type=str, default="./data/label.csv", help="path of label csv file")
@@ -79,7 +63,14 @@ def get_args_pretrain():
     parser.add_argument("--confidence_threshold", type=str, default="0.25, 0.25", help="confidence threshold. When tuning, [min, max]")
     parser.add_argument("--iou_threshold", type=str, default="0.45, 0.45", help="iou threshold. When tuning, [min, max]")
 
+
     args = parser.parse_args()
+
+    logger.info("study_name: %s", args.study_name)
+    logger.info("n_trials: %s", args.n_trials)
+    logger.info("n_warmup_steps: %s", args.n_warmup_steps)
+    logger.info("direction: %s", args.direction)
+    logger.info("tuning_mode: %s", args.tuning_mode)
 
     logger.info("epoch: %s", args.epoch)
     logger.info("source: %s", args.source)
@@ -106,11 +97,10 @@ class TuningByOptuna:
     def set_pretrain_parameter(self):
         """pretrainの調整の設定を取得する関数
         """
-        self.tuning_args = get_args_pretrain()
         # モデル設定
-        self.epoch = self.tuning_args.epoch
-        self.image_source = self.tuning_args.source
-        self.model_task = self.tuning_args.model_task
+        self.epoch = self.optuna_args.epoch
+        self.image_source = self.optuna_args.source
+        self.model_task = self.optuna_args.model_task
 
         if not validate_in_list(self.model_task, MODEL_TASK):
             # モデルタスクが不正な場合はエラー
@@ -176,21 +166,25 @@ class TuningByOptuna:
         """
 
         # ハイパーパラメータ設定
-        input_width = trial.suggest_categorical("input_width", convert_str_to_list(self.tuning_args.input_width, format="int"))
-        input_height = trial.suggest_categorical("input_height", convert_str_to_list(self.tuning_args.input_height, format="int"))
+        input_width = trial.suggest_categorical("input_width", convert_str_to_list(self.optuna_args.input_width, format="int"))
+        input_height = trial.suggest_categorical("input_height", convert_str_to_list(self.optuna_args.input_height, format="int"))
 
         if self.model_task == MODEL_TASK[0]:
             # detectionの場合
             # 文字列をリストに変換
-            confidence_threshold_list = convert_str_to_list(self.tuning_args.confidence_threshold, format="float")
-            iou_threshold_list = convert_str_to_list(self.tuning_args.iou_threshold, format="float")
+            confidence_threshold_list = convert_str_to_list(self.optuna_args.confidence_threshold, format="float")
+            iou_threshold_list = convert_str_to_list(self.optuna_args.iou_threshold, format="float")
 
             confidence_threshold = trial.suggest_float("confidence_threshold", confidence_threshold_list[0], confidence_threshold_list[1])
             iou_threshold = trial.suggest_float("iou_threshold", iou_threshold_list[0], iou_threshold_list[1])
 
+        else:
+            confidence_threshold = 0.0
+            iou_threshold = 0.0
+
         for e in range(self.epoch):
             # モデルの調整
-            score = self.get_scores_for_pretrain_tuning(image_source = self.image_source, input_width = input_width, input_height = input_height, confidence_threshold = confidence_threshold, iou_threshold = iou_threshold, csv_path = self.tuning_args.csv_path, model_task=self.model_task)
+            score = self.get_scores_for_pretrain_tuning(image_source = self.image_source, input_width = input_width, input_height = input_height, confidence_threshold = confidence_threshold, iou_threshold = iou_threshold, csv_path = self.optuna_args.csv_path, model_task=self.model_task)
             trial.report(score, e)
 
             logger.info("epoch: %d, score: %f", e, score)
