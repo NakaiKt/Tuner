@@ -1,7 +1,8 @@
-import sys
+"""
+Optunaのユーティリティ
+"""
 
-sys.path.append("../")
-from utils.csv_handler import get_column
+from Utility.csv_handler import get_column
 
 def get_filename(path: str) -> str:
     """pathからfilenameを取得
@@ -45,7 +46,6 @@ def get_label_from_file_name(file_path: str, csv_path: str) -> int:
     """
     # 拡張子を除いた画像名の取得
     basename = get_filename(file_path)
-    print(basename)
 
     # csvからbasenameのラベル取得
     label = get_label_from_csv(image_name=basename, csv_path=csv_path)

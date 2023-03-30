@@ -17,18 +17,17 @@ get_score_for_tuning関数を作成する必要がある
 
 import optuna
 import argparse
-import sys
 import glob
 import cv2
 import os
+import numpy as np
 
 from optuna_utils import get_label_from_file_name
 from metrics import RMSE
 
-sys.path.append("../")
-from utils.args_format import HelpFormatter
-from utils.convert import convert_str_to_list
-from utils.validation import validate_in_list
+from Utility.args_format import HelpFormatter
+from Utility.convert import convert_str_to_list
+from Utility.validation import validate_in_list
 
 
 MODEL_TASK = ["detection", "crowd_counting"]
@@ -43,9 +42,9 @@ def get_args_optuna():
     """
     parser = argparse.ArgumentParser(formatter_class=HelpFormatter)
     parser.add_argument('--study_name', type=str, default='study', help='study name')
-    parser.add_argument('--n_trials', type=int, default=100, help='number of optuna trials')
+    parser.add_argument('--n_trials', type=int, default=10, help='number of optuna trials')
     parser.add_argument("--n_warmup_steps", type=int, default=5, help="number of warmup steps")
-    parser.add_argument("--direction", type=str, default="maximize", help="direction of optimization")
+    parser.add_argument("--direction", type=str, default="minimize", help="direction of optimization")
     parser.add_argument("--tuning_mode", type=str, default="pretrain", help=f"tuning mode. {TUNING_MODE}")
 
     args = parser.parse_args()
@@ -62,8 +61,8 @@ def get_args_pretrain():
     parser.add_argument("--source", type=str, default="./data/images", help="source of images")
     parser.add_argument("--csv_path", type=str, default="./data/label.csv", help="path of label csv file")
     parser.add_argument("--model_task", type=str, default="detection", help=f"task of model. {MODEL_TASK}")
-    parser.add_argument("--input_width", type=str, default="640", help="input width. When tuning, specify as '1280,640'")
-    parser.add_argument("--input_height", type=str, default="480", help="input height, When tuning, specify as '720,480'")
+    parser.add_argument("--input_width", type=str, default="1280, 640", help="input width. When tuning, specify as '1280,640'")
+    parser.add_argument("--input_height", type=str, default="720, 480", help="input height, When tuning, specify as '720,480'")
     parser.add_argument("--confidence_threshold", type=str, default="0.25, 0.25", help="confidence threshold. When tuning, [min, max]")
     parser.add_argument("--iou_threshold", type=str, default="0.45, 0.45", help="iou threshold. When tuning, [min, max]")
 
@@ -94,7 +93,14 @@ class TuningByOptuna:
             # モデルタスクが不正な場合はエラー
             raise ValueError(f"model_task must be {MODEL_TASK}")
 
-    def get_scores_for_pretrain_tuning(self, image_source: str,input_width: int, input_height: int, confidence_threshold: float, iou_threshold: float,  csv_path: str, model_task: str) -> float:
+    def get_scores_for_pretrain_tuning(self,
+                                       image_source: str,
+                                       input_width: int,
+                                       input_height: int,
+                                       confidence_threshold: float,
+                                       iou_threshold: float,
+                                       csv_path: str,
+                                       model_task: str) -> float:
         """pretrainの調整のための評価値の計算
 
         Args:
@@ -113,24 +119,25 @@ class TuningByOptuna:
         y_label_list = []
         image_source = os.path.join(image_source + "/*")
         for image_name in glob.glob(image_source):
-            print("#########", image_name)
             image_name = image_name.replace("\\", "/")
-            print("############", image_name)
             # 画像の読み込み
             image = cv2.imread(image_name)
-            # 画像サイズ
+            # 画像サイズ(幅, 高さ)
             image = cv2.resize(image, (input_width, input_height))
             # 予測
             if model_task == "detection":
                 y_pred = self.get_score_for_tuning(image = image, confidence_threshold = confidence_threshold, iou_threshold = iou_threshold)
             elif model_task == "crowd_counting":
-                y_pred = self.get_scores_for_tuning(image = image)
+                y_pred = self.get_score_for_tuning(image = image)
             y_pred_list.append(y_pred)
 
             # csvからbasenameのラベル取得
             y_label_list.append(get_label_from_file_name(file_path = image_name, csv_path=csv_path))
 
         # 評価値の計算
+        # listをnumpyに変換
+        y_pred_list = np.array(y_pred_list)
+        y_label_list = np.array(y_label_list)
         score = RMSE(y_label_list, y_pred_list)
 
         return score
@@ -152,8 +159,8 @@ class TuningByOptuna:
         if self.model_task == MODEL_TASK[0]:
             confidence_threshold_list = convert_str_to_list(self.tuning_args.confidence_threshold, format="float")
             iou_threshold_list = convert_str_to_list(self.tuning_args.iou_threshold, format="float")
-            confidence_threshold = trial.suggest_uniform("confidence_threshold", confidence_threshold_list[0], confidence_threshold_list[1])
-            iou_threshold = trial.suggest_uniform("iou_threshold", iou_threshold_list[0], iou_threshold_list[1])
+            confidence_threshold = trial.suggest_float("confidence_threshold", confidence_threshold_list[0], confidence_threshold_list[1])
+            iou_threshold = trial.suggest_float("iou_threshold", iou_threshold_list[0], iou_threshold_list[1])
 
         for e in range(self.epoch):
             # モデルの調整
@@ -162,7 +169,7 @@ class TuningByOptuna:
 
             if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
-                
+
         return score
 
     def main(self):
@@ -175,6 +182,8 @@ class TuningByOptuna:
                 direction=self.optuna_args.direction)
             study.optimize(self.objective_pretrain, n_trials=self.optuna_args.n_trials)
 
+        return study
+
 if __name__ == "__main__":
-    tuning = TuningByOptuna()
+    tuning = TuningByOptuna(get_score_for_tuning=None)
     tuning.main()
