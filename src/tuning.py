@@ -15,7 +15,6 @@ get_score_for_tuning関数を作成する必要がある
 """
 
 
-import argparse
 import glob
 import logging
 import os
@@ -25,8 +24,9 @@ import numpy as np
 import optuna
 from metrics import RMSE
 from optuna_utils import get_label_from_file_name
+from optuna_args import Args
 
-from Utility.format import HelpFormatter, setting_logging_config
+from Utility.format import setting_logging_config
 from Utility.convert import convert_str_to_list
 from Utility.validation import validate_in_list
 
@@ -36,60 +36,16 @@ CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 # loggingの設定
 setting_logging_config()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("optuna")
 optuna.logging.disable_default_handler()
-
-# コマンドライン引数を取得する関数
-def get_args_optuna():
-    """optunaの設定をコマンドラインから取得する関数
-
-    Returns:
-        argparse.Namespace: コマンドライン引数
-    """
-    parser = argparse.ArgumentParser(formatter_class=HelpFormatter)
-    parser.add_argument('--study_name', type=str, default='study', help='study name')
-    parser.add_argument('--n_trials', type=int, default=10, help='number of optuna trials')
-    parser.add_argument("--n_warmup_steps", type=int, default=5, help="number of warmup steps")
-    parser.add_argument("--direction", type=str, default="minimize", help="direction of optimization")
-    parser.add_argument("--tuning_mode", type=str, default="pretrain", help=f"tuning mode. {TUNING_MODE}")
-
-    # pretrainの調整の設定
-    parser.add_argument("--epoch", type=int, default=15, help="number of epoch")
-    parser.add_argument("--source", type=str, default="./data/images", help="source of images")
-    parser.add_argument("--csv_path", type=str, default="./data/label.csv", help="path of label csv file")
-    parser.add_argument("--model_task", type=str, default="detection", help=f"task of model. {MODEL_TASK}")
-    parser.add_argument("--input_width", type=str, default="1280, 640", help="input width. When tuning, specify as '1280,640'")
-    parser.add_argument("--input_height", type=str, default="720, 480", help="input height, When tuning, specify as '720,480'")
-    parser.add_argument("--confidence_threshold", type=str, default="0.25, 0.25", help="confidence threshold. When tuning, [min, max]")
-    parser.add_argument("--iou_threshold", type=str, default="0.45, 0.45", help="iou threshold. When tuning, [min, max]")
-
-
-    args = parser.parse_args()
-
-    logger.info("study_name: %s", args.study_name)
-    logger.info("n_trials: %s", args.n_trials)
-    logger.info("n_warmup_steps: %s", args.n_warmup_steps)
-    logger.info("direction: %s", args.direction)
-    logger.info("tuning_mode: %s", args.tuning_mode)
-
-    logger.info("epoch: %s", args.epoch)
-    logger.info("source: %s", args.source)
-    logger.info("csv_path: %s", args.csv_path)
-    logger.info("model_task: %s", args.model_task)
-    logger.info("input_width: %s", args.input_width)
-    logger.info("input_height: %s", args.input_height)
-    logger.info("confidence_threshold: %s", args.confidence_threshold)
-    logger.info("iou_threshold: %s", args.iou_threshold)
-
-    return args
 
 
 class TuningByOptuna:
     """optunaを用いたハイパーパラメータの調整を行うクラス
     """
-    def __init__(self, get_score_for_tuning):
+    def __init__(self, get_score_for_tuning, **kwargs):
         self.get_score_for_tuning = get_score_for_tuning
-        self.optuna_args = get_args_optuna()
+        self.optuna_args = Args(**kwargs)
 
         if self.optuna_args.tuning_mode == "pretrain":
             self.set_pretrain_parameter()
