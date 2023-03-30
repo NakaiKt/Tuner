@@ -21,6 +21,8 @@ import glob
 import cv2
 import os
 import numpy as np
+import logging
+from logging.config import fileConfig
 
 from optuna_utils import get_label_from_file_name
 from metrics import RMSE
@@ -32,6 +34,10 @@ from Utility.validation import validate_in_list
 
 MODEL_TASK = ["detection", "crowd_counting"]
 TUNING_MODE = ["pretrain", "train"]
+
+fileConfig("./logging.txt", disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
+optuna.logging.disable_default_handler()
 
 # コマンドライン引数を取得する関数
 def get_args_optuna():
@@ -48,6 +54,13 @@ def get_args_optuna():
     parser.add_argument("--tuning_mode", type=str, default="pretrain", help=f"tuning mode. {TUNING_MODE}")
 
     args = parser.parse_args()
+
+    logger.info("study_name: %s", args.study_name)
+    logger.info("n_trials: %s", args.n_trials)
+    logger.info("n_warmup_steps: %s", args.n_warmup_steps)
+    logger.info("direction: %s", args.direction)
+    logger.info("tuning_mode: %s", args.tuning_mode)
+
     return args
 
 def get_args_pretrain():
@@ -67,6 +80,16 @@ def get_args_pretrain():
     parser.add_argument("--iou_threshold", type=str, default="0.45, 0.45", help="iou threshold. When tuning, [min, max]")
 
     args = parser.parse_args()
+
+    logger.info("epoch: %s", args.epoch)
+    logger.info("source: %s", args.source)
+    logger.info("csv_path: %s", args.csv_path)
+    logger.info("model_task: %s", args.model_task)
+    logger.info("input_width: %s", args.input_width)
+    logger.info("input_height: %s", args.input_height)
+    logger.info("confidence_threshold: %s", args.confidence_threshold)
+    logger.info("iou_threshold: %s", args.iou_threshold)
+
     return args
 
 
@@ -131,7 +154,7 @@ class TuningByOptuna:
                 y_pred = self.get_score_for_tuning(image = image)
             y_pred_list.append(y_pred)
 
-            # csvからbasenameのラベル取得
+            # csvからimage_nameのラベル取得
             y_label_list.append(get_label_from_file_name(file_path = image_name, csv_path=csv_path))
 
         # 評価値の計算
@@ -157,8 +180,11 @@ class TuningByOptuna:
         input_height = trial.suggest_categorical("input_height", convert_str_to_list(self.tuning_args.input_height, format="int"))
 
         if self.model_task == MODEL_TASK[0]:
+            # detectionの場合
+            # 文字列をリストに変換
             confidence_threshold_list = convert_str_to_list(self.tuning_args.confidence_threshold, format="float")
             iou_threshold_list = convert_str_to_list(self.tuning_args.iou_threshold, format="float")
+
             confidence_threshold = trial.suggest_float("confidence_threshold", confidence_threshold_list[0], confidence_threshold_list[1])
             iou_threshold = trial.suggest_float("iou_threshold", iou_threshold_list[0], iou_threshold_list[1])
 
@@ -166,6 +192,8 @@ class TuningByOptuna:
             # モデルの調整
             score = self.get_scores_for_pretrain_tuning(image_source = self.image_source, input_width = input_width, input_height = input_height, confidence_threshold = confidence_threshold, iou_threshold = iou_threshold, csv_path = self.tuning_args.csv_path, model_task=self.model_task)
             trial.report(score, e)
+
+            logger.info("epoch: %d, score: %f", e, score)
 
             if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
@@ -175,12 +203,19 @@ class TuningByOptuna:
     def main(self):
         """main関数
         """
+        logger.info("start tuning")
+        # studyの作成
+        study = optuna.create_study(
+            pruner = optuna.pruners.MedianPruner(n_warmup_steps = self.optuna_args.n_warmup_steps),
+            study_name=self.optuna_args.study_name,
+            direction=self.optuna_args.direction)
+
         if self.optuna_args.tuning_mode == TUNING_MODE[0]:
-            study = optuna.create_study(
-                pruner = optuna.pruners.MedianPruner(n_warmup_steps = self.optuna_args.n_warmup_steps),
-                study_name=self.optuna_args.study_name,
-                direction=self.optuna_args.direction)
+            # pretrainの場合
             study.optimize(self.objective_pretrain, n_trials=self.optuna_args.n_trials)
+
+        logger.info("best_params: %s", study.best_params)
+        logger.info("complete tuning")
 
         return study
 
