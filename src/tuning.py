@@ -15,27 +15,27 @@ get_score_for_tuning関数を作成する必要がある
 """
 
 
-import optuna
 import argparse
 import glob
-import cv2
-import os
-import numpy as np
 import logging
-from logging.config import fileConfig
+import os
 
-from optuna_utils import get_label_from_file_name
+import cv2
+import numpy as np
+import optuna
 from metrics import RMSE
+from optuna_utils import get_label_from_file_name
 
-from Utility.args_format import HelpFormatter
+from Utility.format import HelpFormatter, setting_logging_config
 from Utility.convert import convert_str_to_list
 from Utility.validation import validate_in_list
 
-
 MODEL_TASK = ["detection", "crowd_counting"]
 TUNING_MODE = ["pretrain", "train"]
+CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-fileConfig("./logging.txt", disable_existing_loggers=False)
+# loggingの設定
+setting_logging_config()
 logger = logging.getLogger(__name__)
 optuna.logging.disable_default_handler()
 
