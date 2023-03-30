@@ -1,8 +1,12 @@
 # test for tuning.py
 # using pytest
 import pytest
-from tuning import TuningByOptuna
+import shutil
 
+# ../logging.txtをカレントにコピー
+shutil.copyfile("../logging.txt", "logging.txt")
+
+from tuning import TuningByOptuna
 
 def get_score_for_tuning(image, confidence_threshold=1, iou_threshold=1):
     weight = confidence_threshold * iou_threshold
