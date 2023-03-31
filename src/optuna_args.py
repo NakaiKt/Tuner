@@ -23,7 +23,7 @@ class Args():
         """
         self.study_name = "study"
         self.epoch = 1
-        self.n_trials = 10
+        self.n_trials = 30
         self.n_warmup_steps = 5
         self.direction = "minimize"
         self.tuning_mode = "pretrain"

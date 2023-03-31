@@ -28,7 +28,7 @@ from optuna_args import Args
 from Utility.format import setting_logging_config
 from Utility.convert import convert_str_to_list
 from Utility.validation import validate_in_list
-from Utility.image_handler import load_image_cv2, resize_image_cv2, load_image_PIL, resize_image_PIL, normalize_image_pytorch
+from Utility.image_handler import load_image_cv2, resize_image_cv2, load_image_PIL, resize_image_PIL,normalize_image_cv2, normalize_image_PIL
 
 MODEL_TASK = ["detection", "crowd_counting"]
 TUNING_MODE = ["pretrain", "train"]
@@ -83,7 +83,7 @@ class TuningByOptuna:
             image = load_image_PIL(image_name) if self.optuna_args.image_dtype == "PIL" else load_image_cv2(image_name)
             # 画像サイズ(幅, 高さ)
             image = resize_image_PIL(image, (input_width, input_height)) if self.optuna_args.image_dtype == "PIL" else resize_image_cv2(image, (input_width, input_height))
-            image = normalize_image_pytorch(image) if self.optuna_args.image_dtype == "PIL" else image
+            image = normalize_image_PIL(image) if self.optuna_args.image_dtype == "PIL" else normalize_image_cv2(image)
             # 予測
             if self.optuna_args.model_task == "detection":
                 y_pred = self.get_score_for_tuning(image = image, confidence_threshold = confidence_threshold, iou_threshold = iou_threshold)
