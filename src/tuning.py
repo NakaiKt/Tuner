@@ -6,7 +6,7 @@ modelのハイパーパラメータの調整を行うスクリプト
 get_score_for_tuning関数を作成する必要がある
     get_score_for_tuning要件
         引数
-            image: 画像 (cv2.imreadで読み込んだ画像)
+            image: 画像 torch.Tensor
             confidence_threshold: confidence threshold (only detection)
             iou_threshold: iou threshold (only detection)
         返り値
@@ -21,7 +21,7 @@ import os
 
 import numpy as np
 import optuna
-from metrics import RMSE
+from metrics import RMSE, leaky_RMSE
 from optuna_utils import get_label_from_file_name
 from optuna_args import Args
 
@@ -98,7 +98,10 @@ class TuningByOptuna:
         # listをnumpyに変換
         y_pred_list = np.array(y_pred_list)
         y_label_list = np.array(y_label_list)
-        score = RMSE(y_label_list, y_pred_list)
+        if self.optuna_args.metrics == "RMSE":
+            score = RMSE(y_label_list, y_pred_list)
+        elif self.optuna_args.metrics == "LRMSE":
+            score = leaky_RMSE(y_label_list, y_pred_list)
 
         return score
 

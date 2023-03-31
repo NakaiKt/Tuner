@@ -19,11 +19,11 @@ get_score_for_tuning関数を作成する
 要件は以下
 
 - 引数
-    image: 画像 (cv2.imreadで読み込んだ画像)
-    confidence_threshold: confidence threshold (only detection)
-    iou_threshold: iou threshold (only detection)
+    - image: 画像 (cv2.imreadで読み込んだ画像)
+    - confidence_threshold: confidence threshold (only detection)
+    - iou_threshold: iou threshold (only detection)
 - 返り値
-    予測値 (float or int)
+    - 予測値 (float or int)
 
 # 使用方法
 ```python
@@ -39,7 +39,7 @@ study = tuner.main()
 |:--|:--|:--|:--|
 |study_name|str|study|チューニングの名前|
 |epochs|int|1|学習のエポック数|
-|n_trials|int|10|チューニングの試行回数|
+|n_trials|int|30|チューニングの試行回数|
 |n_warmup_steps|int|5|チューニングの最低試行エポック数|
 |direction|str|minimize|チューニングの最適化方向|
 |tuning_mode|str|pretrain|チューニングのモード, pretrain or train|

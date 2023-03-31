@@ -17,11 +17,11 @@ def get_score_for_tuning(image, confidence_threshold=1, iou_threshold=1):
     """
     weight = confidence_threshold * iou_threshold
     # image sizeが480, 1280, 3で最良のスコアを返す
-    if image.shape[0] == 480 and image.shape[1] == 1280:
+    if image.size()[2] == 480 and image.size()[3] == 1280:
         return 1
-    elif image.shape[0] == 480 and image.shape[1] == 640:
+    elif image.size()[2] == 720 and image.size()[3] == 1280:
         return 90 * weight
-    elif image.shape[0] == 720 and image.shape[1] == 1280:
+    elif image.size()[2] == 480 and image.size()[3] == 640:
         return 100 * weight
     else:
         return 150 * weight

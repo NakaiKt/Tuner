@@ -26,6 +26,7 @@ class Args():
         self.n_trials = 30
         self.n_warmup_steps = 5
         self.direction = "minimize"
+        self.metrics = "RMSE"
         self.tuning_mode = "pretrain"
         self.image_dtype = "PIL"
 
