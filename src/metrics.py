@@ -23,4 +23,6 @@ def leaky_RMSE(y_true, y_pred):
     Returns:
         float: RMSE
     """
-    return np.sqrt(np.mean((y_true - y_pred) ** 2 / y_true))
+    # y_trueが0の場合は1に置き換える
+    weight = np.where(y_true == 0, 1, y_true)
+    return np.sqrt(np.mean((y_true - y_pred) ** 2 / weight))
