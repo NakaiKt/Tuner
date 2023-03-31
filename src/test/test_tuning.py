@@ -32,5 +32,6 @@ def test_main():
     study = tuner.main()
     assert study.best_params["confidence_threshold"] == 0.25
     assert study.best_params["iou_threshold"] == 0.45
+    # 最適化問題なので，失敗することもある
     assert study.best_params["input_width"] == 1280
     assert study.best_params["input_height"] == 480

@@ -27,6 +27,7 @@ class Args():
         self.n_warmup_steps = 5
         self.direction = "minimize"
         self.tuning_mode = "pretrain"
+        self.image_dtype = "PIL"
 
         self.source = "./data/images/"
         self.csv_path = "./data/label.csv"

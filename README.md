@@ -43,6 +43,7 @@ study = tuner.main()
 |n_warmup_steps|int|5|チューニングの最低試行エポック数|
 |direction|str|minimize|チューニングの最適化方向|
 |tuning_mode|str|pretrain|チューニングのモード, pretrain or train|
+|image_dtype|str|PIL|画像のデータ型, PIL or cv2|
 |source|str|./data/images/|画像データのパス|
 |csv_path|str|./data/label.csv|ラベルデータのパス|
 |model_task|str|detection|モデルのタスク, classification or detection|
