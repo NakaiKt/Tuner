@@ -37,6 +37,7 @@ class Args():
         self.input_height = "720, 480"
         self.confidence_threshold = "0.25, 0.25"
         self.iou_threshold = "0.45, 0.45"
+        self.image_type = "image"
 
     def logging_args(self):
         """インスタンス変数の値をログに出力する関数

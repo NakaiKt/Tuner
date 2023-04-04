@@ -51,3 +51,4 @@ study = tuner.main()
 |input_height|str|720, 480|入力画像の高さ [max, min]|
 |confidence_threshold|str|0.25, 0.25|検出の信頼度閾値 [max, min]|
 |iou_threshold|str|0.45, 0.45|検出のIOU閾値 [max, min]|
+|image_type|str|image|get_score_for_tuningが処理する画像のタイプ, image or image_source_list|
